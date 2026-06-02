@@ -1,11 +1,24 @@
 import { useState } from "react";
 
 export default function EvaluasiProposal() {
-  // State untuk mengontrol tampilan: 'list', 'form' (isi nilai), atau 'result' (lihat hasil)
   const [view, setView] = useState("list");
   const [selectedProposal, setSelectedProposal] = useState(null);
 
-  // Data dummy proposal yang ditugaskan ke Reviewer
+  // State untuk form input Reviewer
+  const [formScores, setFormScores] = useState({ c1: "", c2: "", c3: "" });
+  const [formCatatan, setFormCatatan] = useState("");
+  const [formKeputusan, setFormKeputusan] = useState("");
+
+  // Kalkulasi rata-rata nilai Reviewer secara otomatis
+  const hitungRataRata = () => {
+    const c1 = Number(formScores.c1) || 0;
+    const c2 = Number(formScores.c2) || 0;
+    const c3 = Number(formScores.c3) || 0;
+    if (c1 === 0 && c2 === 0 && c3 === 0) return 0;
+    return Math.round((c1 + c2 + c3) / 3);
+  };
+
+  // Data dummy proposal dengan detail skor kriteria (AI & Reviewer)
   const [proposals] = useState([
     {
       id: "PRP-001",
@@ -14,7 +27,8 @@ export default function EvaluasiProposal() {
       skema: "Penelitian Terapan",
       status: "Menunggu Review",
       tglTugas: "02 Juni 2026",
-      aiScore: "85",
+      aiDetails: { c1: 85, c2: 80, c3: 90 }, // c1: Novelty, c2: Metodologi, c3: RAB
+      aiScore: 85,
       aiNotes:
         "Proposal ini memiliki novelty yang kuat pada pemanfaatan model AI terkini. Namun, metodologi evaluasi performa model kurang dijelaskan secara rinci. RAB sudah sesuai standar.",
     },
@@ -25,10 +39,11 @@ export default function EvaluasiProposal() {
       skema: "Pengabdian Masyarakat",
       status: "Selesai Direview",
       tglTugas: "28 Mei 2026",
-      aiScore: "90",
+      aiDetails: { c1: 90, c2: 88, c3: 92 },
+      aiScore: 90,
       aiNotes:
         "Target luaran sangat relevan dengan kebutuhan mitra. Pendekatan pemecahan masalah praktis dan terukur.",
-      // Data tambahan untuk hasil yang sudah dinilai
+      reviewerDetails: { c1: 90, c2: 92, c3: 94 },
       reviewerScore: "92",
       reviewerNotes:
         "Proposal sangat bagus, luaran jelas, dan RAB rasional. Pendekatan e-commerce sangat tepat sasaran. Sangat direkomendasikan untuk segera didanai.",
@@ -38,6 +53,10 @@ export default function EvaluasiProposal() {
 
   const handleNilaiClick = (proposal) => {
     setSelectedProposal(proposal);
+    // Reset form saat membuka proposal baru
+    setFormScores({ c1: "", c2: "", c3: "" });
+    setFormCatatan("");
+    setFormKeputusan("");
     setView("form");
   };
 
@@ -50,6 +69,10 @@ export default function EvaluasiProposal() {
     e.preventDefault();
     alert("Penilaian berhasil disimpan!");
     setView("list");
+  };
+
+  const handleScoreChange = (kriteria, value) => {
+    setFormScores((prev) => ({ ...prev, [kriteria]: value }));
   };
 
   return (
@@ -101,7 +124,6 @@ export default function EvaluasiProposal() {
                     </span>
                   </td>
                   <td style={styles.td}>
-                    {/* Logika Tombol Berdasarkan Status */}
                     <button
                       style={
                         item.status === "Menunggu Review"
@@ -133,89 +155,109 @@ export default function EvaluasiProposal() {
             ← Kembali ke Daftar
           </button>
 
+          {/* BAGIAN ATAS: INFO PROPOSAL FULL WIDTH */}
+          <div
+            style={{ ...styles.card, marginTop: "15px", marginBottom: "20px" }}
+          >
+            <h4 style={{ margin: "0 0 15px 0", color: "#1a1a2e" }}>
+              Informasi Proposal
+            </h4>
+            <div style={styles.grid3}>
+              <div style={styles.infoRow}>
+                <strong>Judul Usulan:</strong>{" "}
+                <span>{selectedProposal.judul}</span>
+              </div>
+              <div style={styles.infoRow}>
+                <strong>Ketua Pengusul:</strong>{" "}
+                <span>{selectedProposal.ketua}</span>
+              </div>
+              <div style={styles.infoRow}>
+                <strong>Skema:</strong> <span>{selectedProposal.skema}</span>
+              </div>
+            </div>
+            <button style={{ ...styles.btnSecondary, marginTop: "15px" }}>
+              📄 Unduh / Lihat Dokumen PDF
+            </button>
+          </div>
+
+          {/* BAGIAN BAWAH: GRID 2 KOLOM (SEJAJAR AI vs REVIEWER) */}
           <div style={styles.grid2}>
-            {/* Kolom Kiri: Detail Usulan & AI Assistant */}
-            <div
-              style={{ display: "flex", flexDirection: "column", gap: "20px" }}
-            >
-              {/* Info Proposal */}
-              <div style={styles.card}>
-                <h4
+            {/* KOLOM KIRI: KOTAK AI ASSISTANT */}
+            <div style={styles.aiBox}>
+              <div style={styles.aiHeader}>
+                <h4 style={{ margin: 0 }}>✨ AI Review Assistant</h4>
+                <span style={styles.aiBadge}>Rekomendasi</span>
+              </div>
+              <p
+                style={{
+                  fontSize: "12px",
+                  color: "#6b21a8",
+                  marginTop: "5px",
+                  marginBottom: "15px",
+                }}
+              >
+                Analisis mendalam berdasarkan model bahasa lokal (Qwen 14B).
+              </p>
+
+              {/* Detail Kriteria AI */}
+              <div style={styles.kriteriaBox}>
+                <div style={styles.kriteriaRow}>
+                  <span>1. Relevansi & Kebaruan (Novelty)</span>
+                  <strong>{selectedProposal.aiDetails.c1}</strong>
+                </div>
+                <div style={styles.kriteriaRow}>
+                  <span>2. Metodologi & Pelaksanaan</span>
+                  <strong>{selectedProposal.aiDetails.c2}</strong>
+                </div>
+                <div style={styles.kriteriaRow}>
+                  <span>3. Kelayakan RAB & Jadwal</span>
+                  <strong>{selectedProposal.aiDetails.c3}</strong>
+                </div>
+                <div
                   style={{
-                    marginTop: 0,
-                    borderBottom: "1px solid #eee",
-                    paddingBottom: "10px",
+                    ...styles.kriteriaRow,
+                    borderBottom: "none",
+                    marginTop: "10px",
+                    paddingTop: "10px",
+                    borderTop: "2px solid #d8b4fe",
                   }}
                 >
-                  Informasi Proposal
-                </h4>
-                <div style={styles.infoRow}>
-                  <strong>Judul:</strong> <span>{selectedProposal.judul}</span>
+                  <span style={{ fontWeight: "bold", fontSize: "14px" }}>
+                    Rata-Rata Skor AI
+                  </span>
+                  <strong style={{ fontSize: "18px", color: "#6b21a8" }}>
+                    {selectedProposal.aiScore}
+                  </strong>
                 </div>
-                <div style={styles.infoRow}>
-                  <strong>Ketua Pengusul:</strong>{" "}
-                  <span>{selectedProposal.ketua}</span>
-                </div>
-                <div style={styles.infoRow}>
-                  <strong>Skema:</strong> <span>{selectedProposal.skema}</span>
-                </div>
-                <button
-                  style={{
-                    ...styles.btnSecondary,
-                    marginTop: "15px",
-                    width: "100%",
-                  }}
-                >
-                  📄 Unduh / Lihat Dokumen PDF
-                </button>
               </div>
 
-              {/* Kotak AI Review Assistant */}
-              <div style={styles.aiBox}>
-                <div style={styles.aiHeader}>
-                  <h4 style={{ margin: 0 }}>✨ AI Review Assistant</h4>
-                  <span style={styles.aiBadge}>Rekomendasi</span>
-                </div>
+              {/* Justifikasi AI */}
+              <div
+                style={{
+                  marginTop: "15px",
+                  padding: "12px",
+                  backgroundColor: "rgba(255,255,255,0.7)",
+                  borderRadius: "6px",
+                  border: "1px solid #e9d5ff",
+                }}
+              >
+                <strong style={{ fontSize: "12px", color: "#6b21a8" }}>
+                  Justifikasi Penilaian AI:
+                </strong>
                 <p
-                  style={{ fontSize: "12px", color: "#555", marginTop: "5px" }}
+                  style={{
+                    margin: "5px 0 0 0",
+                    fontSize: "13px",
+                    lineHeight: "1.5",
+                    color: "#4c1d95",
+                  }}
                 >
-                  Berdasarkan pemrosesan LLM lokal (Qwen 14B) terhadap dokumen
-                  PDF proposal:
+                  {selectedProposal.aiNotes}
                 </p>
-                <div style={{ marginTop: "15px" }}>
-                  <div
-                    style={{
-                      fontSize: "24px",
-                      fontWeight: "bold",
-                      color: "#6b21a8",
-                    }}
-                  >
-                    Skor Draf: {selectedProposal.aiScore}/100
-                  </div>
-                  <div
-                    style={{
-                      marginTop: "10px",
-                      padding: "10px",
-                      backgroundColor: "rgba(255,255,255,0.6)",
-                      borderRadius: "6px",
-                    }}
-                  >
-                    <strong>Justifikasi AI:</strong>
-                    <p
-                      style={{
-                        margin: "5px 0 0 0",
-                        fontSize: "13px",
-                        lineHeight: "1.5",
-                      }}
-                    >
-                      {selectedProposal.aiNotes}
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
 
-            {/* Kolom Kanan: Form Penilaian (Edit) ATAU Hasil Penilaian (Read Only) */}
+            {/* KOLOM KANAN: FORM ATAU HASIL REVIEWER */}
             <div style={styles.card}>
               <h4
                 style={{
@@ -241,24 +283,77 @@ export default function EvaluasiProposal() {
                     marginTop: "15px",
                   }}
                 >
-                  <div>
-                    <label style={styles.labelBlock}>Skor Akhir (0-100)</label>
-                    <input
-                      type="number"
-                      max="100"
-                      min="0"
-                      style={styles.inputField}
-                      placeholder="Masukkan nilai..."
-                      required
-                    />
+                  {/* Rincian Input Kriteria */}
+                  <div style={styles.reviewerKriteriaBox}>
+                    <div style={styles.reviewerKriteriaRow}>
+                      <label>1. Relevansi & Kebaruan (Novelty)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        style={styles.inputKriteria}
+                        value={formScores.c1}
+                        onChange={(e) =>
+                          handleScoreChange("c1", e.target.value)
+                        }
+                        required
+                      />
+                    </div>
+                    <div style={styles.reviewerKriteriaRow}>
+                      <label>2. Metodologi & Pelaksanaan</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        style={styles.inputKriteria}
+                        value={formScores.c2}
+                        onChange={(e) =>
+                          handleScoreChange("c2", e.target.value)
+                        }
+                        required
+                      />
+                    </div>
+                    <div style={styles.reviewerKriteriaRow}>
+                      <label>3. Kelayakan RAB & Jadwal</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        style={styles.inputKriteria}
+                        value={formScores.c3}
+                        onChange={(e) =>
+                          handleScoreChange("c3", e.target.value)
+                        }
+                        required
+                      />
+                    </div>
+                    <div
+                      style={{
+                        ...styles.reviewerKriteriaRow,
+                        borderBottom: "none",
+                        marginTop: "10px",
+                        paddingTop: "10px",
+                        borderTop: "2px solid #cbd5e1",
+                      }}
+                    >
+                      <span style={{ fontWeight: "bold", fontSize: "14px" }}>
+                        Rata-Rata Skor Akhir
+                      </span>
+                      <strong style={{ fontSize: "18px", color: "#1a1a2e" }}>
+                        {hitungRataRata()}
+                      </strong>
+                    </div>
                   </div>
+
                   <div>
                     <label style={styles.labelBlock}>
                       Catatan Evaluasi / Saran Perbaikan
                     </label>
                     <textarea
-                      style={{ ...styles.inputField, height: "150px" }}
+                      style={{ ...styles.inputField, height: "120px" }}
                       placeholder="Ketik catatan evaluasi Anda di sini..."
+                      value={formCatatan}
+                      onChange={(e) => setFormCatatan(e.target.value)}
                       required
                     ></textarea>
                   </div>
@@ -266,7 +361,12 @@ export default function EvaluasiProposal() {
                     <label style={styles.labelBlock}>
                       Rekomendasi Keputusan
                     </label>
-                    <select style={styles.inputField} required>
+                    <select
+                      style={styles.inputField}
+                      value={formKeputusan}
+                      onChange={(e) => setFormKeputusan(e.target.value)}
+                      required
+                    >
                       <option value="">-- Pilih Keputusan --</option>
                       <option value="Diterima">Diterima / Didanai</option>
                       <option value="Revisi">Diterima dengan Revisi</option>
@@ -275,9 +375,9 @@ export default function EvaluasiProposal() {
                   </div>
                   <div
                     style={{
-                      marginTop: "20px",
+                      marginTop: "10px",
                       borderTop: "1px solid #eee",
-                      paddingTop: "20px",
+                      paddingTop: "15px",
                     }}
                   >
                     <button type="submit" style={styles.btnPrimaryFull}>
@@ -295,25 +395,35 @@ export default function EvaluasiProposal() {
                     marginTop: "15px",
                   }}
                 >
-                  <div style={styles.resultBox}>
-                    <label style={styles.labelBlock}>Skor Akhir</label>
+                  {/* Rincian Hasil Kriteria */}
+                  <div style={styles.reviewerKriteriaBox}>
+                    <div style={styles.kriteriaRow}>
+                      <span>1. Relevansi & Kebaruan (Novelty)</span>
+                      <strong>{selectedProposal.reviewerDetails?.c1}</strong>
+                    </div>
+                    <div style={styles.kriteriaRow}>
+                      <span>2. Metodologi & Pelaksanaan</span>
+                      <strong>{selectedProposal.reviewerDetails?.c2}</strong>
+                    </div>
+                    <div style={styles.kriteriaRow}>
+                      <span>3. Kelayakan RAB & Jadwal</span>
+                      <strong>{selectedProposal.reviewerDetails?.c3}</strong>
+                    </div>
                     <div
                       style={{
-                        fontSize: "28px",
-                        fontWeight: "bold",
-                        color: "#1a1a2e",
+                        ...styles.kriteriaRow,
+                        borderBottom: "none",
+                        marginTop: "10px",
+                        paddingTop: "10px",
+                        borderTop: "2px solid #cbd5e1",
                       }}
                     >
-                      {selectedProposal.reviewerScore}{" "}
-                      <span
-                        style={{
-                          fontSize: "14px",
-                          color: "#666",
-                          fontWeight: "normal",
-                        }}
-                      >
-                        /100
+                      <span style={{ fontWeight: "bold", fontSize: "14px" }}>
+                        Rata-Rata Skor Akhir
                       </span>
+                      <strong style={{ fontSize: "18px", color: "#1a1a2e" }}>
+                        {selectedProposal.reviewerScore}
+                      </strong>
                     </div>
                   </div>
 
@@ -394,16 +504,16 @@ const styles = {
     fontWeight: "bold",
   },
   badgeSuccess: {
-    backgroundColor: "#d4edda",
-    color: "#155724",
+    backgroundColor: "#dcfce7",
+    color: "#166534",
     padding: "5px 10px",
     borderRadius: "20px",
     fontSize: "11px",
     fontWeight: "bold",
   },
   badgeSuccessLg: {
-    backgroundColor: "#d4edda",
-    color: "#155724",
+    backgroundColor: "#dcfce7",
+    color: "#166534",
     padding: "8px 15px",
     borderRadius: "6px",
     fontSize: "13px",
@@ -411,22 +521,23 @@ const styles = {
     display: "inline-block",
   },
 
-  // Grid layout
+  // Layout
   grid2: {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
     gap: "20px",
-    marginTop: "15px",
+    alignItems: "start",
   },
+  grid3: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "15px" },
   infoRow: {
     display: "flex",
     flexDirection: "column",
     gap: "3px",
-    marginBottom: "10px",
     fontSize: "13px",
+    color: "#334155",
   },
 
-  // Gaya khusus AI Box
+  // Gaya khusus AI Box & Kriteria
   aiBox: {
     backgroundColor: "#f3e8ff",
     borderRadius: "8px",
@@ -446,6 +557,48 @@ const styles = {
     borderRadius: "12px",
     fontSize: "10px",
     fontWeight: "bold",
+  },
+  kriteriaBox: {
+    backgroundColor: "white",
+    borderRadius: "6px",
+    padding: "15px",
+    border: "1px solid #e9d5ff",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+  },
+  kriteriaRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "8px 0",
+    borderBottom: "1px dashed #eee",
+    fontSize: "13px",
+    color: "#334155",
+  },
+
+  // Gaya Kriteria Reviewer
+  reviewerKriteriaBox: {
+    backgroundColor: "#f8fafc",
+    borderRadius: "6px",
+    padding: "15px",
+    border: "1px solid #cbd5e1",
+  },
+  reviewerKriteriaRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "6px 0",
+    borderBottom: "1px dashed #e2e8f0",
+    fontSize: "13px",
+    color: "#334155",
+  },
+  inputKriteria: {
+    width: "60px",
+    padding: "6px",
+    border: "1px solid #cbd5e1",
+    borderRadius: "4px",
+    textAlign: "center",
+    fontWeight: "bold",
+    fontSize: "13px",
   },
 
   // Form & Result Styles
