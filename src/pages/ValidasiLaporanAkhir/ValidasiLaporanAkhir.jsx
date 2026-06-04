@@ -1,134 +1,226 @@
 import { useState } from "react";
 import { useOutletContext } from "react-router-dom";
 
-export default function ValidasiLaporanAkhir() {
+export default function ValidasiLaporan() {
   const { role } = useOutletContext();
-  const isFakultas = role === "OPERATOR_FAKULTAS";
-
+  const [activeTab, setActiveTab] = useState("kemajuan"); // Tab State
   const [view, setView] = useState("list");
   const [selectedItem, setSelectedItem] = useState(null);
+  const [keputusan, setKeputusan] = useState("");
+  const [catatan, setCatatan] = useState("");
 
-  const [laporanData] = useState({
-    fakultas: [
-      {
-        id: "LAP-FAK-001",
-        judul: "Sistem Monitoring Kualitas Udara Kampus",
-        ketua: "Ir. Eko Purwanto, M.T.",
-        tipe: "Laporan Akhir Penelitian",
-        tglKirim: "15 November 2026",
-        status: "Menunggu Validasi",
-      },
-    ],
-    lppm: [
-      {
-        id: "LAP-UNIV-011",
-        judul: "Pengembangan Material Maju untuk Baterai EV",
-        ketua: "Prof. Dr. Heru Susanto",
-        tipe: "Laporan Akhir Penelitian",
-        tglKirim: "20 November 2026",
-        status: "Perbaikan",
-        catatan: "Bukti submit jurnal belum dilampirkan.",
-      },
-    ],
+  // ==========================================
+  // DATA DUMMY: LAPORAN KEMAJUAN (Sesuai AD-05)
+  // ==========================================
+  const [laporanKemajuan, setLaporanKemajuan] = useState([
+    {
+      id: "PROG-UNIV-001",
+      judul: "Pengembangan Material Maju untuk Baterai EV",
+      ketua: "Prof. Dr. Heru Susanto",
+      skema: "Penelitian Terapan Universitas",
+      status: "Menunggu Validasi Fakultas",
+    },
+    {
+      id: "PROG-UNIV-002",
+      judul: "Pemberdayaan Desa Wisata Bahari di Jepara",
+      ketua: "Dr. Agus Riyanto",
+      skema: "Pengabdian Internal Universitas",
+      status: "Diteruskan ke LPPM",
+    },
+  ]);
+
+  // ==========================================
+  // DATA DUMMY: LAPORAN AKHIR & LUARAN (Sesuai AD-05)
+  // ==========================================
+  const [laporanAkhir, setLaporanAkhir] = useState([
+    {
+      id: "FINAL-UNIV-003",
+      judul: "Sistem Cerdas IoT Pertanian",
+      ketua: "Ir. Ahmad Dahlan, M.T",
+      skema: "Penelitian Terapan Universitas",
+      status: "Menunggu Validasi Fakultas",
+    },
+    {
+      id: "FINAL-UNIV-004",
+      judul: "Optimasi Jaringan 5G",
+      ketua: "Dr. Budi Santoso, M.Kom.",
+      skema: "Penelitian Dasar Universitas",
+      status: "Diteruskan ke LPPM",
+    },
+    {
+      id: "FINAL-UNIV-005",
+      judul: "Pelatihan Kewirausahaan Ibu PKK",
+      ketua: "Siti Aminah, M.Kom",
+      skema: "Pengabdian Internal Universitas",
+      status: "Menunggu Approval Pimpinan",
+    },
+  ]);
+
+  // Filter Data berdasarkan Tab dan Role
+  const currentData = activeTab === "kemajuan" ? laporanKemajuan : laporanAkhir;
+
+  const filteredData = currentData.filter((item) => {
+    if (role === "OPERATOR FAKULTAS") {
+      return item.status === "Menunggu Validasi Fakultas";
+    } else if (role === "OPERATOR LPPM") {
+      return (
+        item.status === "Diteruskan ke LPPM" ||
+        item.status === "Menunggu Validasi LPPM"
+      );
+    } else if (role === "PIMPINAN LPPM") {
+      // Pimpinan LPPM tidak validasi laporan kemajuan, hanya laporan akhir
+      if (activeTab === "kemajuan") return false;
+      return item.status === "Menunggu Approval Pimpinan";
+    }
+    return false;
   });
 
-  const currentData = isFakultas ? laporanData.fakultas : laporanData.lppm;
-  const labelTingkat = isFakultas
-    ? "Tingkat Fakultas"
-    : "Tingkat Universitas (LPPM)";
+  const getRoleLabel = () => {
+    if (role === "OPERATOR FAKULTAS") return "Tingkat Fakultas";
+    if (role === "OPERATOR LPPM") return "Tingkat LPPM";
+    if (role === "PIMPINAN LPPM") return "Persetujuan Akhir (Approval)";
+    return "";
+  };
 
   const handlePeriksaClick = (item) => {
     setSelectedItem(item);
+    setKeputusan("");
+    setCatatan("");
     setView("form");
   };
-  const handleDetailClick = (item) => {
-    setSelectedItem(item);
-    setView("result");
-  };
+
   const handleSimpan = (e) => {
     e.preventDefault();
-    alert("Hasil validasi laporan akhir berhasil disimpan!");
+    if (!keputusan) {
+      alert("Pilih keputusan terlebih dahulu!");
+      return;
+    }
+
+    const processUpdate = (dataArray) => {
+      return dataArray.map((item) => {
+        if (item.id === selectedItem.id) {
+          if (keputusan === "TERUSKAN_LPPM")
+            return { ...item, status: "Diteruskan ke LPPM" };
+          if (keputusan === "TERUSKAN_PIMPINAN")
+            return { ...item, status: "Menunggu Approval Pimpinan" };
+          if (keputusan === "SELESAI_LPPM")
+            return { ...item, status: "Selesai (Disetujui LPPM)" };
+          if (keputusan === "APPROVE")
+            return { ...item, status: "Selesai (Disetujui Pimpinan)" };
+          if (keputusan === "REVISI")
+            return { ...item, status: "Revisi (Dikembalikan ke Dosen)" };
+        }
+        return item;
+      });
+    };
+
+    if (activeTab === "kemajuan") {
+      setLaporanKemajuan(processUpdate(laporanKemajuan));
+    } else {
+      setLaporanAkhir(processUpdate(laporanAkhir));
+    }
+
+    alert(`Validasi berhasil diproses dengan status: ${keputusan}`);
     setView("list");
   };
 
   return (
-    <div>
-      <div style={styles.header}>
-        <h2 style={{ margin: 0, color: "#1a1a2e" }}>
-          Validasi Laporan Akhir ({labelTingkat})
+    <div
+      style={{ backgroundColor: "white", padding: "20px", borderRadius: "8px" }}
+    >
+      {/* HEADER & TAB NAVIGATION */}
+      <div style={{ marginBottom: "20px" }}>
+        <h2 style={{ margin: "0 0 5px 0", color: "#1a1a2e" }}>
+          Validasi Pelaporan ({getRoleLabel()})
         </h2>
-        <p style={{ margin: "5px 0 0 0", color: "#666" }}>
-          {view === "list" &&
-            "Pemeriksaan dokumen laporan akhir dan kesesuaian target luaran yang diunggah Dosen."}
-          {view === "form" && `Form Pemeriksaan Laporan: ${selectedItem?.id}`}
-          {view === "result" && `Detail Validasi Laporan: ${selectedItem?.id}`}
+        <p style={{ margin: "0 0 15px 0", color: "#666", fontSize: "14px" }}>
+          Pemeriksaan dokumen laporan kemajuan, laporan akhir, bukti luaran, dan
+          SPTB.
         </p>
+
+        {/* TOMBOL TAB */}
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            borderBottom: "2px solid #e2e8f0",
+            paddingBottom: "10px",
+          }}
+        >
+          <button
+            onClick={() => {
+              setActiveTab("kemajuan");
+              setView("list");
+            }}
+            style={
+              activeTab === "kemajuan" ? styles.tabActive : styles.tabInactive
+            }
+          >
+            📝 Laporan Kemajuan
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("akhir");
+              setView("list");
+            }}
+            style={
+              activeTab === "akhir" ? styles.tabActive : styles.tabInactive
+            }
+          >
+            🎯 Laporan Akhir & Luaran
+          </button>
+        </div>
       </div>
 
+      {/* --- TAMPILAN 1: TABEL --- */}
       {view === "list" && (
-        <div style={styles.card}>
+        <div style={{ overflowX: "auto" }}>
           <table style={styles.table}>
             <thead>
               <tr>
-                <th style={styles.th}>ID Laporan</th>
+                <th style={styles.th}>ID Dokumen</th>
                 <th style={styles.th}>Judul Kegiatan</th>
                 <th style={styles.th}>Ketua</th>
-                <th style={styles.th}>Jenis Laporan</th>
-                <th style={styles.th}>Tanggal Submit</th>
-                <th style={styles.th}>Status</th>
+                <th style={styles.th}>Skema</th>
+                <th style={styles.th}>Status Terkini</th>
                 <th style={styles.th}>Aksi</th>
               </tr>
             </thead>
             <tbody>
-              {currentData.map((item) => (
+              {filteredData.map((item) => (
                 <tr key={item.id} style={styles.tr}>
                   <td style={styles.td}>
                     <strong>{item.id}</strong>
                   </td>
                   <td style={styles.td}>{item.judul}</td>
                   <td style={styles.td}>{item.ketua}</td>
-                  <td style={styles.td}>{item.tipe}</td>
-                  <td style={styles.td}>{item.tglKirim}</td>
+                  <td style={styles.td}>{item.skema}</td>
                   <td style={styles.td}>
-                    <span
-                      style={
-                        item.status === "Menunggu Validasi"
-                          ? styles.badgeWarning
-                          : item.status === "Diterima"
-                            ? styles.badgeSuccess
-                            : styles.badgeDanger
-                      }
-                    >
-                      {item.status}
-                    </span>
+                    <span style={styles.badgeWarning}>{item.status}</span>
                   </td>
                   <td style={styles.td}>
                     <button
-                      style={
-                        item.status === "Menunggu Validasi"
-                          ? styles.btnPrimary
-                          : styles.btnSecondary
-                      }
-                      onClick={() =>
-                        item.status === "Menunggu Validasi"
-                          ? handlePeriksaClick(item)
-                          : handleDetailClick(item)
-                      }
+                      onClick={() => handlePeriksaClick(item)}
+                      style={styles.btnPrimary}
                     >
-                      {item.status === "Menunggu Validasi"
-                        ? "Periksa Laporan"
-                        : "Lihat Hasil"}
+                      {role === "PIMPINAN LPPM"
+                        ? "Review & Approve"
+                        : "Periksa Berkas"}
                     </button>
                   </td>
                 </tr>
               ))}
-              {currentData.length === 0 && (
+              {filteredData.length === 0 && (
                 <tr>
                   <td
-                    colSpan="7"
-                    style={{ padding: "20px", textAlign: "center" }}
+                    colSpan="6"
+                    style={{
+                      padding: "20px",
+                      textAlign: "center",
+                      color: "#666",
+                    }}
                   >
-                    Tidak ada data laporan.
+                    Tidak ada antrean validasi/approval pada tab ini saat ini.
                   </td>
                 </tr>
               )}
@@ -137,42 +229,43 @@ export default function ValidasiLaporanAkhir() {
         </div>
       )}
 
-      {(view === "form" || view === "result") && selectedItem && (
+      {/* --- TAMPILAN 2: FORM VALIDASI / APPROVAL --- */}
+      {view === "form" && selectedItem && (
         <div>
           <button onClick={() => setView("list")} style={styles.btnOutline}>
             ← Kembali ke Daftar
           </button>
-          <div style={styles.grid2}>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "20px",
+              marginTop: "20px",
+            }}
+          >
+            {/* Kolom Kiri: Info Kegiatan & Lampiran */}
             <div
               style={{ display: "flex", flexDirection: "column", gap: "20px" }}
             >
-              <div style={styles.card}>
-                <h4
-                  style={{
-                    marginTop: 0,
-                    borderBottom: "1px solid #eee",
-                    paddingBottom: "10px",
-                  }}
-                >
-                  Informasi Kegiatan
-                </h4>
+              <div style={styles.cardBox}>
+                <h4 style={styles.cardTitle}>Informasi Kegiatan</h4>
                 <div style={styles.infoRow}>
-                  <strong>ID Laporan:</strong> <span>{selectedItem.id}</span>
+                  <strong>ID Dokumen:</strong> {selectedItem.id}
                 </div>
                 <div style={styles.infoRow}>
-                  <strong>Judul:</strong> <span>{selectedItem.judul}</span>
+                  <strong>Judul:</strong> {selectedItem.judul}
+                </div>
+                <div style={styles.infoRow}>
+                  <strong>Skema:</strong> {selectedItem.skema}
+                </div>
+                <div style={styles.infoRow}>
+                  <strong>Ketua:</strong> {selectedItem.ketua}
                 </div>
               </div>
-              <div style={{ ...styles.card, backgroundColor: "#f8fafc" }}>
-                <h4
-                  style={{
-                    marginTop: 0,
-                    borderBottom: "1px solid #e2e8f0",
-                    paddingBottom: "10px",
-                  }}
-                >
-                  📂 Lampiran Dosen
-                </h4>
+
+              <div style={styles.cardBox}>
+                <h4 style={styles.cardTitle}>Lampiran Dosen</h4>
                 <div
                   style={{
                     display: "flex",
@@ -180,110 +273,162 @@ export default function ValidasiLaporanAkhir() {
                     gap: "10px",
                   }}
                 >
-                  <button style={styles.btnDoc}>
-                    📄 Buka Laporan_Akhir_Lengkap.pdf
-                  </button>
-                  <button style={styles.btnDoc}>
-                    📄 Buka SPTB_Keuangan.pdf
-                  </button>
-                  <button style={styles.btnDoc}>
-                    📄 Buka Draft_Publikasi_Luaran.pdf
-                  </button>
+                  {activeTab === "kemajuan" ? (
+                    <>
+                      <button style={styles.btnDoc}>
+                        📄 Buka Laporan_Kemajuan.pdf
+                      </button>
+                      <button style={styles.btnDoc}>
+                        📖 Buka Catatan_Harian_Logbook.pdf
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button style={styles.btnDoc}>
+                        📄 Buka Laporan_Akhir_Lengkap.pdf
+                      </button>
+                      <button style={styles.btnDoc}>
+                        🎯 Buka Bukti_Luaran_Tercapai.pdf
+                      </button>
+                      <button style={styles.btnDoc}>
+                        💰 Buka SPTB_Keuangan.pdf
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
 
-            <div style={styles.card}>
-              <h4
+            {/* Kolom Kanan: Form Aksi */}
+            <div style={styles.cardBox}>
+              <h4 style={styles.cardTitle}>
+                {role === "PIMPINAN LPPM"
+                  ? "Form Persetujuan Akhir (Approval)"
+                  : "Form Validasi Berkas"}
+              </h4>
+
+              <form
+                onSubmit={handleSimpan}
                 style={{
-                  marginTop: 0,
-                  borderBottom: "1px solid #eee",
-                  paddingBottom: "10px",
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "15px",
                 }}
               >
-                {view === "form" ? "Form Validasi Laporan" : "Hasil Validasi"}
-              </h4>
-              {view === "form" ? (
-                <form
-                  onSubmit={handleSimpan}
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "15px",
-                    marginTop: "15px",
-                  }}
-                >
+                {/* Checklist hanya untuk Operator */}
+                {role !== "PIMPINAN LPPM" && (
                   <div style={styles.checklistContainer}>
                     <label
-                      style={{ ...styles.labelBlock, marginBottom: "10px" }}
+                      style={{
+                        fontWeight: "bold",
+                        marginBottom: "10px",
+                        display: "block",
+                        fontSize: "13px",
+                      }}
                     >
-                      Pengecekan Komponen Akhir:
+                      Pengecekan Komponen:
                     </label>
-                    <label style={styles.checkboxLabel}>
-                      <input type="checkbox" required /> Kesesuaian Format
-                      Laporan Akhir
-                    </label>
-                    <label style={styles.checkboxLabel}>
-                      <input type="checkbox" required /> Bukti Luaran
-                      (Jurnal/HAKI/dll) Valid
-                    </label>
-                    <label style={styles.checkboxLabel}>
-                      <input type="checkbox" required /> Kelengkapan Laporan
-                      Keuangan (SPTB)
-                    </label>
+                    {activeTab === "kemajuan" ? (
+                      <>
+                        <label style={styles.checkboxLabel}>
+                          <input type="checkbox" required /> Format Laporan
+                          Kemajuan Sesuai
+                        </label>
+                        <label style={styles.checkboxLabel}>
+                          <input type="checkbox" required /> Logbook / Catatan
+                          Harian Terisi
+                        </label>
+                      </>
+                    ) : (
+                      <>
+                        <label style={styles.checkboxLabel}>
+                          <input type="checkbox" required /> Format Laporan
+                          Akhir Sesuai
+                        </label>
+                        <label style={styles.checkboxLabel}>
+                          <input type="checkbox" required /> Bukti Luaran Valid
+                          & Dapat Diakses
+                        </label>
+                        <label style={styles.checkboxLabel}>
+                          <input type="checkbox" required /> Laporan Keuangan
+                          (SPTB) Lengkap
+                        </label>
+                      </>
+                    )}
                   </div>
-                  <div>
-                    <label style={styles.labelBlock}>Keputusan Akhir</label>
-                    <select style={styles.inputField} required>
-                      <option value="">-- Pilih Status --</option>
-                      <option value="Diterima">
-                        Diterima (Kegiatan Selesai)
-                      </option>
-                      <option value="Perbaikan">Perbaikan Laporan</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={styles.labelBlock}>Catatan Validasi</label>
-                    <textarea
-                      style={{ ...styles.inputField, height: "100px" }}
-                      placeholder="Tuliskan catatan perbaikan..."
-                    ></textarea>
-                  </div>
-                  <div style={{ marginTop: "20px" }}>
-                    <button type="submit" style={styles.btnPrimaryFull}>
-                      Submit Validasi Laporan
-                    </button>
-                  </div>
-                </form>
-              ) : (
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "15px",
-                    marginTop: "15px",
-                  }}
-                >
-                  <div style={styles.resultBox}>
-                    <label style={styles.labelBlock}>Status Laporan</label>
-                    <span
-                      style={
-                        selectedItem.status === "Diterima"
-                          ? styles.badgeSuccessLg
-                          : styles.badgeDangerLg
-                      }
-                    >
-                      {selectedItem.status}
-                    </span>
-                  </div>
-                  <div style={styles.resultBox}>
-                    <label style={styles.labelBlock}>Catatan Operator</label>
-                    <p style={{ margin: 0, fontSize: "13px" }}>
-                      {selectedItem.catatan || "-"}
-                    </p>
-                  </div>
+                )}
+
+                <div>
+                  <label style={styles.labelBlock}>Keputusan Akhir</label>
+                  <select
+                    value={keputusan}
+                    onChange={(e) => setKeputusan(e.target.value)}
+                    style={styles.inputField}
+                    required
+                  >
+                    <option value="">-- Pilih Keputusan --</option>
+
+                    {role === "OPERATOR FAKULTAS" && (
+                      <>
+                        <option value="TERUSKAN_LPPM">
+                          Sesuai (Teruskan ke LPPM)
+                        </option>
+                        <option value="REVISI">
+                          Perbaikan Laporan (Kembalikan ke Dosen)
+                        </option>
+                      </>
+                    )}
+
+                    {role === "OPERATOR LPPM" && (
+                      <>
+                        {activeTab === "kemajuan" ? (
+                          <option value="SELESAI_LPPM">
+                            Lolos Validasi (Selesai Laporan Kemajuan)
+                          </option>
+                        ) : (
+                          <option value="TERUSKAN_PIMPINAN">
+                            Lolos Validasi (Ajukan Approval Pimpinan)
+                          </option>
+                        )}
+                        <option value="REVISI">
+                          Perbaikan Laporan (Kembalikan ke Dosen)
+                        </option>
+                      </>
+                    )}
+
+                    {role === "PIMPINAN LPPM" && (
+                      <>
+                        <option value="APPROVE">
+                          Setujui (Kegiatan Selesai & Ditutup)
+                        </option>
+                        <option value="REVISI">
+                          Tolak / Minta Klarifikasi Ulang
+                        </option>
+                      </>
+                    )}
+                  </select>
                 </div>
-              )}
+
+                <div>
+                  <label style={styles.labelBlock}>
+                    Catatan (Wajib jika Revisi)
+                  </label>
+                  <textarea
+                    value={catatan}
+                    onChange={(e) => setCatatan(e.target.value)}
+                    style={{ ...styles.inputField, height: "100px" }}
+                    placeholder="Ketik catatan evaluasi di sini..."
+                  ></textarea>
+                </div>
+
+                <div style={{ marginTop: "10px" }}>
+                  <button type="submit" style={styles.btnPrimaryFull}>
+                    {role === "PIMPINAN LPPM"
+                      ? "Submit Approval"
+                      : "Submit Validasi"}
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
         </div>
@@ -294,99 +439,103 @@ export default function ValidasiLaporanAkhir() {
 
 // === STYLES ===
 const styles = {
-  header: { marginBottom: "20px" },
-  card: {
-    backgroundColor: "white",
-    borderRadius: "8px",
-    padding: "20px",
-    boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-    border: "1px solid #e2e8f0",
-  },
-  table: { width: "100%", borderCollapse: "collapse", fontSize: "13px" },
-  th: {
-    borderBottom: "2px solid #1a1a2e",
-    padding: "12px",
-    textAlign: "left",
-    color: "#1a1a2e",
-  },
-  tr: { borderBottom: "1px solid #eee" },
-  td: { padding: "12px", verticalAlign: "middle" },
-  badgeWarning: {
-    backgroundColor: "#fef08a",
-    color: "#854d0e",
-    padding: "5px 10px",
-    borderRadius: "20px",
-    fontSize: "11px",
-    fontWeight: "bold",
-  },
-  badgeSuccess: {
-    backgroundColor: "#dcfce7",
-    color: "#166534",
-    padding: "5px 10px",
-    borderRadius: "20px",
-    fontSize: "11px",
-    fontWeight: "bold",
-  },
-  badgeDanger: {
-    backgroundColor: "#fee2e2",
-    color: "#991b1b",
-    padding: "5px 10px",
-    borderRadius: "20px",
-    fontSize: "11px",
-    fontWeight: "bold",
-  },
-  badgeSuccessLg: {
-    backgroundColor: "#dcfce7",
-    color: "#166534",
-    padding: "8px 15px",
+  tabActive: {
+    backgroundColor: "#1a1a2e",
+    color: "white",
+    padding: "10px 20px",
     borderRadius: "6px",
-    fontSize: "13px",
+    border: "none",
+    cursor: "pointer",
     fontWeight: "bold",
-    display: "inline-block",
+    fontSize: "13px",
   },
-  badgeDangerLg: {
-    backgroundColor: "#fee2e2",
-    color: "#991b1b",
-    padding: "8px 15px",
+  tabInactive: {
+    backgroundColor: "transparent",
+    color: "#64748b",
+    padding: "10px 20px",
     borderRadius: "6px",
-    fontSize: "13px",
+    border: "1px solid #cbd5e1",
+    cursor: "pointer",
     fontWeight: "bold",
-    display: "inline-block",
+    fontSize: "13px",
   },
-  grid2: {
-    display: "grid",
-    gridTemplateColumns: "1fr 1fr",
-    gap: "20px",
+  table: {
+    width: "100%",
+    borderCollapse: "collapse",
+    fontSize: "14px",
     marginTop: "15px",
   },
-  infoRow: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "3px",
-    marginBottom: "10px",
-    fontSize: "13px",
+  th: {
+    backgroundColor: "#f8fafc",
+    borderBottom: "2px solid #e2e8f0",
+    padding: "12px",
+    textAlign: "left",
+    color: "#334155",
   },
+  tr: { borderBottom: "1px solid #e2e8f0" },
+  td: { padding: "12px", verticalAlign: "middle", color: "#1e293b" },
+  badgeWarning: {
+    backgroundColor: "#fef3c7",
+    color: "#b45309",
+    padding: "5px 10px",
+    borderRadius: "20px",
+    fontSize: "12px",
+    fontWeight: "bold",
+  },
+  btnPrimary: {
+    backgroundColor: "#1a1a2e",
+    color: "white",
+    border: "none",
+    padding: "6px 12px",
+    borderRadius: "4px",
+    cursor: "pointer",
+    fontSize: "12px",
+  },
+  btnOutline: {
+    backgroundColor: "transparent",
+    color: "#1a1a2e",
+    border: "1px solid #1a1a2e",
+    padding: "6px 15px",
+    borderRadius: "20px",
+    cursor: "pointer",
+    fontSize: "12px",
+    fontWeight: "bold",
+  },
+  cardBox: {
+    backgroundColor: "#f8fafc",
+    padding: "20px",
+    borderRadius: "8px",
+    border: "1px solid #e2e8f0",
+  },
+  cardTitle: {
+    margin: "0 0 15px 0",
+    color: "#1a1a2e",
+    borderBottom: "1px solid #cbd5e1",
+    paddingBottom: "10px",
+  },
+  infoRow: { marginBottom: "8px", fontSize: "13px", color: "#334155" },
   labelBlock: {
     display: "block",
     fontWeight: "bold",
     marginBottom: "8px",
     fontSize: "13px",
-    color: "#64748b",
+    color: "#1e293b",
   },
   inputField: {
-    padding: "10px",
-    border: "1px solid #cbd5e1",
-    borderRadius: "6px",
-    boxSizing: "border-box",
     width: "100%",
+    padding: "10px",
+    borderRadius: "4px",
+    border: "1px solid #cbd5e1",
     fontSize: "13px",
+    boxSizing: "border-box",
     fontFamily: "inherit",
   },
   checklistContainer: {
-    backgroundColor: "#f1f5f9",
+    backgroundColor: "white",
     padding: "15px",
     borderRadius: "6px",
     border: "1px solid #e2e8f0",
+    marginBottom: "15px",
   },
   checkboxLabel: {
     display: "flex",
@@ -397,39 +546,15 @@ const styles = {
     color: "#334155",
     cursor: "pointer",
   },
-  resultBox: {
-    padding: "15px",
-    backgroundColor: "#f8fafc",
-    border: "1px solid #e2e8f0",
-    borderRadius: "6px",
-  },
-  btnPrimary: {
-    backgroundColor: "#1a1a2e",
-    color: "white",
-    border: "none",
-    padding: "8px 15px",
-    borderRadius: "4px",
-    cursor: "pointer",
-    fontSize: "12px",
-  },
-  btnSecondary: {
-    backgroundColor: "#f1f5f9",
-    color: "#475569",
+  btnDoc: {
+    backgroundColor: "white",
+    color: "#1e293b",
     border: "1px solid #cbd5e1",
-    padding: "8px 15px",
-    borderRadius: "4px",
+    padding: "10px",
+    borderRadius: "6px",
     cursor: "pointer",
     fontSize: "12px",
-    fontWeight: "bold",
-  },
-  btnOutline: {
-    backgroundColor: "transparent",
-    color: "#1a1a2e",
-    border: "1px solid #1a1a2e",
-    padding: "8px 15px",
-    borderRadius: "20px",
-    cursor: "pointer",
-    fontSize: "12px",
+    textAlign: "left",
     fontWeight: "bold",
   },
   btnPrimaryFull: {
@@ -442,19 +567,5 @@ const styles = {
     cursor: "pointer",
     fontWeight: "bold",
     fontSize: "13px",
-  },
-  btnDoc: {
-    backgroundColor: "white",
-    color: "#1e293b",
-    border: "1px solid #cbd5e1",
-    padding: "10px",
-    borderRadius: "6px",
-    cursor: "pointer",
-    fontSize: "12px",
-    textAlign: "left",
-    fontWeight: "bold",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
   },
 };

@@ -3,36 +3,40 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 
 export default function DashboardLayout() {
   const [role, setRole] = useState("DOSEN");
-  const [showOperatorPopup, setShowOperatorPopup] = useState(false); // State untuk modal popup
+  const [showOperatorPopup, setShowOperatorPopup] = useState(false);
+  const [showPimpinanPopup, setShowPimpinanPopup] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
-
   const isDashboard = location.pathname === "/dashboard";
 
   const handleRoleChange = (e) => {
     const selectedRole = e.target.value;
-
     if (selectedRole === "OPERATOR") {
-      // Jika pilih operator, JANGAN langsung ganti role, tapi tampilkan popup
       setShowOperatorPopup(true);
+    } else if (selectedRole === "PIMPINAN") {
+      setShowPimpinanPopup(true);
     } else {
-      // Jika pilih aktor lain, langsung ganti dan redirect
       setRole(selectedRole);
       navigate("/dashboard");
     }
   };
 
   const handlePilihOperator = (tipeOperator) => {
-    setRole(tipeOperator); // Nilainya: "OPERATOR_FAKULTAS" atau "OPERATOR_LPPM"
-    setShowOperatorPopup(false); // Tutup popup
-    navigate("/dashboard"); // Redirect ke dashboard
+    setRole(tipeOperator);
+    setShowOperatorPopup(false);
+    navigate("/dashboard");
   };
 
-  // Logika pengecekan untuk menavigasi menu (karena sekarang ada 2 jenis operator)
-  const isOperator = role === "OPERATOR_FAKULTAS" || role === "OPERATOR_LPPM";
+  const handlePilihPimpinan = (tipePimpinan) => {
+    setRole(tipePimpinan);
+    setShowPimpinanPopup(false);
+    navigate("/dashboard");
+  };
 
-  // Label nama role untuk ditampilkan di UI
+  const isOperator = role === "OPERATOR FAKULTAS" || role === "OPERATOR LPPM";
+  const isPimpinan = role === "PIMPINAN LPPM" || role === "PIMPINAN FAKULTAS";
+
   const displayRoleName = role.replace("_", " ");
 
   return (
@@ -42,7 +46,7 @@ export default function DashboardLayout() {
         flexDirection: "column",
         minHeight: "100vh",
         backgroundColor: "#f4f6f9",
-        position: "relative", // Penting untuk absolute popup
+        position: "relative",
       }}
     >
       {/* POPUP MODAL PILIH OPERATOR */}
@@ -50,7 +54,7 @@ export default function DashboardLayout() {
         <div style={styles.modalOverlay}>
           <div style={styles.modalContent}>
             <h3 style={{ marginTop: 0, color: "#1a1a2e" }}>
-              Pilih Tingkat Wewenang
+              Pilih Tingkat Wewenang Operator
             </h3>
             <p
               style={{ fontSize: "14px", color: "#666", marginBottom: "20px" }}
@@ -61,20 +65,58 @@ export default function DashboardLayout() {
               style={{ display: "flex", flexDirection: "column", gap: "10px" }}
             >
               <button
-                onClick={() => handlePilihOperator("OPERATOR_FAKULTAS")}
+                onClick={() => handlePilihOperator("OPERATOR FAKULTAS")}
                 style={styles.btnPrimaryFull}
               >
-                🏢 Operator Fakultas
+                Operator Fakultas
               </button>
               <button
-                onClick={() => handlePilihOperator("OPERATOR_LPPM")}
+                onClick={() => handlePilihOperator("OPERATOR LPPM")}
                 style={styles.btnPrimaryFull}
               >
-                🎓 Operator Universitas (LPPM)
+                Operator Universitas (LPPM)
               </button>
             </div>
             <button
               onClick={() => setShowOperatorPopup(false)}
+              style={{ ...styles.btnOutline, marginTop: "15px", width: "100%" }}
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* POPUP MODAL PILIH PIMPINAN */}
+      {showPimpinanPopup && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <h3 style={{ marginTop: 0, color: "#1a1a2e" }}>
+              Pilih Tingkat Wewenang Pimpinan
+            </h3>
+            <p
+              style={{ fontSize: "14px", color: "#666", marginBottom: "20px" }}
+            >
+              Silakan pilih ruang lingkup wewenang Pimpinan Anda:
+            </p>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "10px" }}
+            >
+              <button
+                onClick={() => handlePilihPimpinan("PIMPINAN LPPM")}
+                style={styles.btnPrimaryFull}
+              >
+                Pimpinan LPPM
+              </button>
+              <button
+                onClick={() => handlePilihPimpinan("PIMPINAN FAKULTAS")}
+                style={styles.btnPrimaryFull}
+              >
+                Pimpinan Prodi / Fakultas / Universitas
+              </button>
+            </div>
+            <button
+              onClick={() => setShowPimpinanPopup(false)}
               style={{ ...styles.btnOutline, marginTop: "15px", width: "100%" }}
             >
               Batal
@@ -94,11 +136,10 @@ export default function DashboardLayout() {
         }}
       >
         <h3 style={{ margin: 0, color: "#1a1a2e" }}>SIP3MU UNDIP</h3>
-
         <div style={{ display: "flex", gap: "20px", alignItems: "center" }}>
-          {/* Dropdown Pemilihan Role */}
+          {/* 1. Dropdown Pemilihan Role (Paling Kiri) */}
           <select
-            value={isOperator ? "OPERATOR" : role}
+            value={isOperator ? "OPERATOR" : isPimpinan ? "PIMPINAN" : role}
             onChange={handleRoleChange}
             style={{
               padding: "8px",
@@ -115,6 +156,45 @@ export default function DashboardLayout() {
             <option value="ADMINISTRATOR">ADMINISTRATOR</option>
           </select>
 
+          {/* 2. Ikon Notifikasi (Di Tengah) */}
+          {role === "DOSEN" && (
+            <div
+              style={{
+                position: "relative",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+              }}
+              onClick={() => navigate("/persetujuan-anggota")}
+            >
+              <span
+                style={{
+                  fontSize: "16px",
+                  fontWeight: "bold",
+                  color: "#1a1a2e",
+                }}
+              >
+                🔔
+              </span>
+              <span
+                style={{
+                  position: "absolute",
+                  top: "-10px",
+                  right: "-15px",
+                  backgroundColor: "#ef4444",
+                  color: "white",
+                  borderRadius: "50%",
+                  padding: "2px 6px",
+                  fontSize: "10px",
+                  fontWeight: "bold",
+                }}
+              >
+                1
+              </span>
+            </div>
+          )}
+
+          {/* 3. Profil / Nama Pengguna (Paling Kanan) */}
           <div
             style={{
               display: "flex",
@@ -131,7 +211,11 @@ export default function DashboardLayout() {
                 backgroundColor: "#ccc",
               }}
             ></div>
-            <span>Nama Pengguna</span>
+            <span
+              style={{ fontSize: "14px", fontWeight: "bold", color: "#334155" }}
+            >
+              Nama Pengguna
+            </span>
           </div>
         </div>
       </header>
@@ -143,7 +227,7 @@ export default function DashboardLayout() {
           padding: "15px 30px",
           display: "flex",
           justifyContent: "center",
-          gap: "50px",
+          gap: "30px",
           flexWrap: "wrap",
         }}
       >
@@ -151,20 +235,20 @@ export default function DashboardLayout() {
           <span>Dashboard</span>
         </Link>
 
-        {/* --- MENU KHUSUS DOSEN --- */}
+        {/* MENU KHUSUS DOSEN */}
         {role === "DOSEN" && (
           <>
             <Link to="/penelitian" style={styles.navLink}>
               <span>Penelitian</span>
-              <span style={styles.dropdownIcon}>▼</span>
+              <span style={styles.dropdownIcon}></span>
             </Link>
             <Link to="/pengabdian" style={styles.navLink}>
               <span>Pengabdian</span>
-              <span style={styles.dropdownIcon}>▼</span>
+              <span style={styles.dropdownIcon}></span>
             </Link>
             <Link to="/publikasi" style={styles.navLink}>
               <span>Publikasi</span>
-              <span style={styles.dropdownIcon}>▼</span>
+              <span style={styles.dropdownIcon}></span>
             </Link>
             <Link to="/pendanaan-lain" style={styles.navLink}>
               <span>Pendanaan lain</span>
@@ -175,11 +259,14 @@ export default function DashboardLayout() {
           </>
         )}
 
-        {/* --- MENU KHUSUS REVIEWER --- */}
+        {/* MENU KHUSUS REVIEWER */}
         {role === "REVIEWER" && (
           <>
             <Link to="/evaluasi-proposal" style={styles.navLink}>
               <span>Evaluasi Proposal</span>
+            </Link>
+            <Link to="/penilaian-pemaparan" style={styles.navLink}>
+              <span>Penilaian Pemaparan</span>
             </Link>
             <Link to="/monev" style={styles.navLink}>
               <span>Proses Monev</span>
@@ -187,34 +274,45 @@ export default function DashboardLayout() {
           </>
         )}
 
-        {/* --- MENU KHUSUS OPERATOR --- */}
+        {/* MENU KHUSUS OPERATOR */}
         {isOperator && (
           <>
+            <Link to="/manajemen-periode" style={styles.navLink}>
+              <span>Manajemen Periode</span>
+            </Link>
             <Link to="/validasi-administratif" style={styles.navLink}>
               <span>Validasi Administratif</span>
             </Link>
             <Link to="/penugasan-review" style={styles.navLink}>
               <span>Penugasan Reviewer</span>
             </Link>
-            <Link to="/validasi-laporan-akhir" style={styles.navLink}>
-              <span>Validasi Laporan Akhir</span>
+            <Link to="/penetapan-usulan" style={styles.navLink}>
+              <span>Penetapan Pendanaan</span>
             </Link>
-            {role === "OPERATOR_LPPM" && (
-              <Link to="/validasi-luaran-non-hibah" style={styles.navLink}>
-                <span>Validasi Luaran Non-Hibah</span>
+            <Link to="/validasi-laporan-akhir" style={styles.navLink}>
+              <span>Validasi Laporan</span>
+            </Link>
+            <Link to="/validasi-luaran-non-hibah" style={styles.navLink}>
+              <span>Validasi Luaran</span>
+            </Link>
+          </>
+        )}
+
+        {/* MENU KHUSUS PIMPINAN */}
+        {isPimpinan && (
+          <>
+            <Link to="/monitoring" style={styles.navLink}>
+              <span>Monitoring Kegiatan</span>
+            </Link>
+            {role === "PIMPINAN LPPM" && (
+              <Link to="/approval-pimpinan" style={styles.navLink}>
+                <span>Approval Pimpinan</span>
               </Link>
             )}
           </>
         )}
 
-        {/* --- MENU KHUSUS PIMPINAN --- */}
-        {role === "PIMPINAN" && (
-          <Link to="/monitoring" style={styles.navLink}>
-            <span>Monitoring Kegiatan</span>
-          </Link>
-        )}
-
-        {/* --- MENU KHUSUS ADMINISTRATOR --- */}
+        {/* MENU KHUSUS ADMINISTRATOR */}
         {role === "ADMINISTRATOR" && (
           <Link to="/kelola-sistem" style={styles.navLink}>
             <span>Administrasi Sistem</span>
@@ -233,11 +331,11 @@ export default function DashboardLayout() {
             minHeight: "500px",
           }}
         >
-          {/* Kirimkan data role ke Outlet agar page tahu sedang jadi operator apa */}
+          {/* Kirimkan data role ke Outlet agar page tahu sedang jadi aktor apa */}
           <Outlet context={{ role }} />
         </div>
 
-        {/* Right Sidebar - HANYA MUNCUL DI PAGE DASHBOARD */}
+        {/* Right Sidebar HANYA MUNCUL DI PAGE DASHBOARD */}
         {isDashboard && (
           <div
             style={{
